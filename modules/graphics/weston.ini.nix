@@ -72,20 +72,11 @@ in {
           };
         });
     };
-    enableDemoApplications = mkEnableOption "some applications for demoing";
   };
 
   config = lib.mkIf cfg.enable {
-    ghaf.graphics.weston.launchers = lib.optionals cfg.enableDemoApplications demoLaunchers;
-    environment.systemPackages = with pkgs;
-      lib.optionals cfg.enableDemoApplications [
-        # Graphical applications
-        # Probably, we'll want to re/move it from here later
-        chromium
-        element-desktop
-        gala-app
-        zathura
-      ];
+    ghaf.graphics.weston.launchers = lib.optionals cfg.enable demoLaunchers;
+    environment.systemPackages = with pkgs; lib.optionals cfg.enable [];
     environment.etc."xdg/weston/weston.ini" = {
       text =
         ''
