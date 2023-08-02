@@ -7,87 +7,104 @@
   ...
 }: let
   configHost = config;
-  waypipe-ssh = pkgs.callPackage ../../../user-apps/waypipe-ssh {};
-  appvmBaseConfiguration = {
-    imports = [
-      ({lib, ...}: {
-        ghaf = {
-          users.accounts.enable = lib.mkDefault configHost.ghaf.users.accounts.enable;
-          profiles.graphics.enable = true;
-          profiles.applications.enable = true;
-          development = {
-            # NOTE: SSH port also becomes accessible on the network interface
-            #       that has been passed through to NetVM
-            ssh.daemon.enable = lib.mkDefault configHost.ghaf.development.ssh.daemon.enable;
-            debug.tools.enable = lib.mkDefault configHost.ghaf.development.debug.tools.enable;
-          };
-        };
-
-        users.users.${configHost.ghaf.users.accounts.user}.openssh.authorizedKeys.keyFiles = ["${waypipe-ssh}/keys/waypipe-ssh.pub"];
-
-        networking.hostName = "appvm";
-        system.stateVersion = lib.trivial.release;
-
-        nixpkgs.buildPlatform.system = configHost.nixpkgs.buildPlatform.system;
-        nixpkgs.hostPlatform.system = configHost.nixpkgs.hostPlatform.system;
-
-        networking = {
-          enableIPv6 = false;
-          interfaces.ethint0.useDHCP = false;
-          firewall.allowedTCPPorts = [22];
-          firewall.allowedUDPPorts = [67];
-          useNetworkd = true;
-        };
-
-        microvm = {
-          mem = 2048;
-          hypervisor = "qemu";
-          qemu.bios.enable = true;
-          storeDiskType = "squashfs";
-          interfaces = [{
-            type = "tap";
-            id = "vm-appvm";
-            mac = "02:00:00:03:03:03";
-          }];
-        };
-
-        networking.nat = {
-          enable = true;
-          internalInterfaces = ["ethint0"];
-        };
-
-        # Set internal network's interface name to ethint0
-        systemd.network.links."10-ethint0" = {
-          matchConfig.PermanentMACAddress = "02:00:00:03:03:03";
-          linkConfig.Name = "ethint0";
-        };
-
-        systemd.network = {
-          enable = true;
-          networks."10-ethint0" = {
-            matchConfig.MACAddress = "02:00:00:03:03:03";
-            addresses = [
-              {
-                # IP-address for debugging subnet
-                addressConfig.Address = "192.168.101.4/24";
-              }
-            ];
-            routes =  [
-              { routeConfig.Gateway = "192.168.101.1"; }
-            ];
-            linkConfig.RequiredForOnline = "routable";
-            linkConfig.ActivationPolicy = "always-up";
-          };
-        };
-
-        imports = import ../../module-list.nix;
-      })
-    ];
-  };
   cfg = config.ghaf.virtualization.microvm.appvm;
-in {
+  waypipe-ssh = pkgs.callPackage ../../../user-apps/waypipe-ssh {};
+
+  makeVm = { package, index }: let
+      # temporary dirty hacks for the demo
+      name = "vm-" + builtins.substring 0 10 package.name;
+      macBase = builtins.toString (3 + index);
+      mac = "02:00:00:03:03:0" + macBase;
+      ipAddressBase = builtins.toString (4 + index);
+      ipAddress = "192.168.101.${ipAddressBase}/24";
+
+      appvmConfiguration = {
+        imports = [
+          ({lib, config, ...}: {
+            ghaf = {
+              users.accounts.enable = lib.mkDefault configHost.ghaf.users.accounts.enable;
+              profiles.graphics.enable = true;
+
+              development = {
+                # NOTE: SSH port also becomes accessible on the network interface
+                #       that has been passed through to NetVM
+                ssh.daemon.enable = lib.mkDefault configHost.ghaf.development.ssh.daemon.enable;
+                debug.tools.enable = lib.mkDefault configHost.ghaf.development.debug.tools.enable;
+              };
+            };
+
+            users.users.${configHost.ghaf.users.accounts.user}.openssh.authorizedKeys.keyFiles = ["${waypipe-ssh}/keys/waypipe-ssh.pub"];
+
+            networking.hostName = name;
+            system.stateVersion = lib.trivial.release;
+
+            nixpkgs.buildPlatform.system = configHost.nixpkgs.buildPlatform.system;
+            nixpkgs.hostPlatform.system = configHost.nixpkgs.hostPlatform.system;
+
+            networking = {
+              enableIPv6 = false;
+              interfaces.ethint0.useDHCP = false;
+              firewall.allowedTCPPorts = [22];
+              firewall.allowedUDPPorts = [67];
+              useNetworkd = true;
+            };
+
+            microvm = {
+              mem = 2048;
+              hypervisor = "qemu";
+              qemu.bios.enable = true;
+              storeDiskType = "squashfs";
+              interfaces = [{
+                type = "tap";
+                id = name;
+                mac = mac;
+              }];
+            };
+
+            networking.nat = {
+              enable = true;
+              internalInterfaces = ["ethint0"];
+            };
+
+            # Set internal network's interface name to ethint0
+            systemd.network.links."10-ethint0" = {
+              matchConfig.PermanentMACAddress = mac;
+              linkConfig.Name = "ethint0";
+            };
+
+            systemd.network = {
+              enable = true;
+              networks."10-ethint0" = {
+                matchConfig.MACAddress = mac;
+                addresses = [
+                  {
+                    # IP-address for debugging subnet
+                    addressConfig.Address = ipAddress;
+                  }
+                ];
+                routes = [
+                  { routeConfig.Gateway = "192.168.101.1"; }
+                ];
+                linkConfig.RequiredForOnline = "routable";
+                linkConfig.ActivationPolicy = "always-up";
+              };
+            };
+
+            imports = import ../../module-list.nix;
+          })
+        ];
+      };
+    in
+    {
+      autostart = true;
+      config = appvmConfiguration // { imports = appvmConfiguration.imports ++ cfg.extraModules ++ [{ environment.systemPackages = [ package ]; }]; };
+      specialArgs = { inherit lib; };
+    };
+in
+{
   options.ghaf.virtualization.microvm.appvm = {
     enable = lib.mkEnableOption "appvm";
+    apps = lib.mkOption { type = lib.types.listOf lib.types.package; default = [ ]; };
 
     extraModules = lib.mkOption {
       description = ''
@@ -99,16 +116,9 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    microvm.vms."appvm" = {
-      autostart = true;
-      config =
-        appvmBaseConfiguration
-        // {
-          imports =
-            appvmBaseConfiguration.imports
-            ++ cfg.extraModules;
-        };
-      specialArgs = {inherit lib;};
-    };
+    microvm.vms = (
+      let apps = lib.imap0 (index: package: { "appvm-${package.name}" = makeVm { inherit package index; }; }) cfg.apps;
+      in lib.foldr lib.recursiveUpdate { } apps
+    );
   };
 }
