@@ -9,11 +9,13 @@
     name = "demo-pdf";
 
     src = ./Whitepaper.pdf;
-    phases = [ "unpackPhase" ];
+    phases = [ "installPhase" ];
 
-    unpackPhase = ''
-      mkdir -p $out
-      cp $src $out/
+    installPhase = ''
+      mkdir -p $out/bin
+      cp ${./Whitepaper.pdf} $out/Whitepaper.pdf
+      echo "zathura $out/Whitepaper.pdf" > $out/bin/run-zathura
+      chmod 755 $out/bin/run-zathura
     '';
 
     meta = with lib; {
