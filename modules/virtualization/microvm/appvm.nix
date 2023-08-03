@@ -11,6 +11,7 @@
   waypipe-ssh = pkgs.callPackage ../../../user-apps/waypipe-ssh {};
 
   makeVm = { vm, index }: let
+      hostname = "vm-" + vm.name;
       appvmConfiguration = {
         imports = [
           ({lib, config, ...}: {
@@ -28,7 +29,7 @@
 
             users.users.${configHost.ghaf.users.accounts.user}.openssh.authorizedKeys.keyFiles = ["${waypipe-ssh}/keys/waypipe-ssh.pub"];
 
-            networking.hostName = vm.name;
+            networking.hostName = hostname;
             system.stateVersion = lib.trivial.release;
 
             nixpkgs.buildPlatform.system = configHost.nixpkgs.buildPlatform.system;
@@ -49,7 +50,7 @@
               storeDiskType = "squashfs";
               interfaces = [{
                 type = "tap";
-                id = vm.name;
+                id = hostname;
                 mac = vm.macAddress;
               }];
             };
