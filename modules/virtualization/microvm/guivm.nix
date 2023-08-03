@@ -10,7 +10,7 @@
   waypipe-ssh = pkgs.callPackage ../../../user-apps/waypipe-ssh {};
   guivmBaseConfiguration = {
     imports = [
-      ({lib, ...}: {
+      ({lib, pkgs, ...}: {
         ghaf = {
           users.accounts.enable = lib.mkDefault configHost.ghaf.users.accounts.enable;
           profiles.graphics.enable = true;
@@ -110,6 +110,10 @@
         };
 
         imports = import ../../module-list.nix;
+
+        services.udev.extraRules = ''
+          ACTION=="add",SUBSYSTEM=="backlight",KERNEL=="intel_backlight",RUN+="${pkgs.bash}/bin/sh -c '${pkgs.coreutils}/bin/echo 120000 > /sys/class/backlight/intel_backlight/brightness'"
+        '';
       })
     ];
   };
