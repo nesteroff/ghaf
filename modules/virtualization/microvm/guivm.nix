@@ -26,16 +26,6 @@
           };
           graphics.weston.launchers = [
             {
-              path = "${pkgs.weston}/bin/weston-terminal";
-              icon = "${pkgs.weston}/share/weston/icon_terminal.png";
-            }
-
-            {
-              path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.4 weston-terminal";
-              icon = "${pkgs.weston}/share/weston/icon_editor.png";
-            }
-
-            {
               path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.5 chromium --enable-features=UseOzonePlatform --ozone-platform=wayland";
               icon = "${pkgs.weston}/share/weston/icon_editor.png";
             }
