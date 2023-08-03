@@ -34,17 +34,17 @@
             }
 
             {
-              path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.4 chromium --enable-features=UseOzonePlatform --ozone-platform=wayland";
+              path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.5 chromium --enable-features=UseOzonePlatform --ozone-platform=wayland";
               icon = "${pkgs.weston}/share/weston/icon_editor.png";
             }
 
             {
-              path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.4 gala --enable-features=UseOzonePlatform --ozone-platform=wayland";
+              path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.6 gala --enable-features=UseOzonePlatform --ozone-platform=wayland";
               icon = "${pkgs.weston}/share/weston/icon_editor.png";
             }
 
             {
-              path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.4 zathura";
+              path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.7 zathura";
               icon = "${pkgs.weston}/share/weston/icon_editor.png";
             }
           ];
