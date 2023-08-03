@@ -92,7 +92,7 @@
                     }
                     {
                       name = "zathura";
-                      packages = [ zathura ];
+                      packages = [ zathura (pkgs.callPackage ../user-apps/demo-pdf {}) ];
                       ipAddress = "192.168.101.7/24";
                       macAddress = "02:00:00:03:03:07";
                       ramMb = 512;

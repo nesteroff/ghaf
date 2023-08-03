@@ -8,6 +8,8 @@
 }: let
   configHost = config;
   waypipe-ssh = pkgs.callPackage ../../../user-apps/waypipe-ssh {};
+  demo-pdf = (pkgs.callPackage ../../../user-apps/demo-pdf {});
+
   guivmBaseConfiguration = {
     imports = [
       ({lib, pkgs, ...}: {
@@ -44,7 +46,7 @@
             }
 
             {
-              path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.7 zathura";
+              path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.7 zathura ${demo-pdf}/Whitepaper.pdf";
               icon = "${pkgs.weston}/share/weston/icon_editor.png";
             }
           ];
