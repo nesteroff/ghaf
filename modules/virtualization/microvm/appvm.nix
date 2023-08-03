@@ -10,14 +10,7 @@
   cfg = config.ghaf.virtualization.microvm.appvm;
   waypipe-ssh = pkgs.callPackage ../../../user-apps/waypipe-ssh {};
 
-  makeVm = { package, index }: let
-      # temporary dirty hacks for the demo
-      name = "vm-" + builtins.substring 0 10 package.name;
-      macBase = builtins.toString (3 + index);
-      mac = "02:00:00:03:03:0" + macBase;
-      ipAddressBase = builtins.toString (4 + index);
-      ipAddress = "192.168.101.${ipAddressBase}/24";
-
+  makeVm = { vm, index }: let
       appvmConfiguration = {
         imports = [
           ({lib, config, ...}: {
@@ -35,7 +28,7 @@
 
             users.users.${configHost.ghaf.users.accounts.user}.openssh.authorizedKeys.keyFiles = ["${waypipe-ssh}/keys/waypipe-ssh.pub"];
 
-            networking.hostName = name;
+            networking.hostName = vm.name;
             system.stateVersion = lib.trivial.release;
 
             nixpkgs.buildPlatform.system = configHost.nixpkgs.buildPlatform.system;
@@ -56,8 +49,8 @@
               storeDiskType = "squashfs";
               interfaces = [{
                 type = "tap";
-                id = name;
-                mac = mac;
+                id = vm.name;
+                mac = vm.macAddress;
               }];
             };
 
@@ -68,18 +61,18 @@
 
             # Set internal network's interface name to ethint0
             systemd.network.links."10-ethint0" = {
-              matchConfig.PermanentMACAddress = mac;
+              matchConfig.PermanentMACAddress = vm.macAddress;
               linkConfig.Name = "ethint0";
             };
 
             systemd.network = {
               enable = true;
               networks."10-ethint0" = {
-                matchConfig.MACAddress = mac;
+                matchConfig.MACAddress = vm.macAddress;
                 addresses = [
                   {
                     # IP-address for debugging subnet
-                    addressConfig.Address = ipAddress;
+                    addressConfig.Address = vm.ipAddress;
                   }
                 ];
                 routes = [
@@ -97,16 +90,27 @@
     in
     {
       autostart = true;
-      config = appvmConfiguration // { imports = appvmConfiguration.imports ++ cfg.extraModules ++ [{ environment.systemPackages = [ package ]; }]; };
+      config = appvmConfiguration // { imports = appvmConfiguration.imports ++ cfg.extraModules ++ [{ environment.systemPackages = vm.packages; }]; };
       specialArgs = { inherit lib; };
     };
 in
 {
-  options.ghaf.virtualization.microvm.appvm = {
+  options.ghaf.virtualization.microvm.appvm = with lib; {
     enable = lib.mkEnableOption "appvm";
-    apps = lib.mkOption { type = lib.types.listOf lib.types.package; default = [ ]; };
+    vms = with types; mkOption {
+      type = lib.types.listOf (submodule {
+        options = {
+          name = mkOption { type = str; };
+          packages = mkOption { type = types.listOf package; default = [ ]; };
+          ipAddress = mkOption { type = str; };
+          macAddress = mkOption { type = str; };
+          ramMb = mkOption { type = int; };
+        };
+      });
+      default = [ ];
+    };
 
-    extraModules = lib.mkOption {
+    extraModules = mkOption {
       description = ''
         List of additional modules to be imported and evaluated as part of
         appvm's NixOS configuration.
@@ -117,8 +121,8 @@ in
 
   config = lib.mkIf cfg.enable {
     microvm.vms = (
-      let apps = lib.imap0 (index: package: { "appvm-${package.name}" = makeVm { inherit package index; }; }) cfg.apps;
-      in lib.foldr lib.recursiveUpdate { } apps
+      let vms = lib.imap0 (index: vm: { "appvm-${vm.name}" = makeVm { inherit vm index; }; }) cfg.vms;
+      in lib.foldr lib.recursiveUpdate { } vms
     );
   };
 }
