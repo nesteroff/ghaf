@@ -81,14 +81,16 @@
                       packages = [ chromium ];
                       ipAddress = "192.168.101.5/24";
                       macAddress = "02:00:00:03:03:05";
-                      ramMb = 2048;
+                      ramMb = 3072;
+                      cores = 4;
                     }
                     {
                       name = "gala";
                       packages = [ (pkgs.callPackage ../user-apps/gala {}) ];
                       ipAddress = "192.168.101.6/24";
                       macAddress = "02:00:00:03:03:06";
-                      ramMb = 2048;
+                      ramMb = 1536;
+                      cores = 2;
                     }
                     {
                       name = "zathura";
@@ -96,6 +98,7 @@
                       ipAddress = "192.168.101.7/24";
                       macAddress = "02:00:00:03:03:07";
                       ramMb = 512;
+                      cores = 1;
                     }
                   ];
                   extraModules = appvmExtraModules;

@@ -10,7 +10,7 @@
   cfg = config.ghaf.virtualization.microvm.appvm;
   waypipe-ssh = pkgs.callPackage ../../../user-apps/waypipe-ssh {};
 
-  makeVm = { vm, index }: let
+  makeVm = { vm }: let
       hostname = "vm-" + vm.name;
       appvmConfiguration = {
         imports = [
@@ -44,7 +44,8 @@
             };
 
             microvm = {
-              mem = 2048;
+              mem = vm.ramMb;
+              vcpu = vm.cores;
               hypervisor = "qemu";
               qemu.bios.enable = true;
               storeDiskType = "squashfs";
@@ -106,6 +107,7 @@ in
           ipAddress = mkOption { type = str; };
           macAddress = mkOption { type = str; };
           ramMb = mkOption { type = int; };
+          cores = mkOption { type = int; };
         };
       });
       default = [ ];
@@ -122,7 +124,7 @@ in
 
   config = lib.mkIf cfg.enable {
     microvm.vms = (
-      let vms = lib.imap0 (index: vm: { "appvm-${vm.name}" = makeVm { inherit vm index; }; }) cfg.vms;
+      let vms = map (vm: { "appvm-${vm.name}" = makeVm { inherit vm; }; }) cfg.vms;
       in lib.foldr lib.recursiveUpdate { } vms
     );
   };
