@@ -36,7 +36,9 @@
       {
         microvm.qemu.extraArgs = [
           "-usb"
-          "-device" "usb-host,vendorid=0x046d,productid=0xc534"
+          "-device" "usb-host,vendorid=0x046d,productid=0xc52b"
+          "-device" "usb-host,vendorid=0x046d,productid=0xc328"
+          "-device" "usb-host,vendorid=0x413c,productid=0x301a"
         ];
         microvm.devices = [
           {
@@ -58,7 +60,10 @@
           ../modules/virtualization/microvm/netvm.nix
           ../modules/virtualization/microvm/guivm.nix
           ../modules/virtualization/microvm/appvm.nix
-          ({ pkgs, ...}: {
+          ({ pkgs, ...}: let
+            vsockproxy = pkgs.callPackage ../user-apps/vsockproxy {};
+            in
+            {
             ghaf = {
               hardware.x86_64.common.enable = true;
 
@@ -83,6 +88,7 @@
                       macAddress = "02:00:00:03:03:05";
                       ramMb = 3072;
                       cores = 4;
+                      cid = 4;
                     }
                     {
                       name = "gala";
@@ -91,6 +97,7 @@
                       macAddress = "02:00:00:03:03:06";
                       ramMb = 1536;
                       cores = 2;
+                      cid = 5;
                     }
                     {
                       name = "zathura";
@@ -99,6 +106,7 @@
                       macAddress = "02:00:00:03:03:07";
                       ramMb = 512;
                       cores = 1;
+                      cid = 6;
                     }
                   ];
                   extraModules = appvmExtraModules;
@@ -112,8 +120,31 @@
                 debug.enable = variant == "debug";
               };
             };
+
             # Group kvm needs to access to USB keyboard and mouse for guivm USB passthrough 
-            services.udev.extraRules= "SUBSYSTEM==\"usb\",ATTR{idVendor}==\"046d\",ATTR{idProduct}==\"c534\",GROUP+=\"kvm\"";
+            services.udev.extraRules = ''
+              # Logitech usb dongle
+              SUBSYSTEM=="usb",ATTR{idVendor}=="046d",ATTR{idProduct}=="c52b",GROUP+="kvm"
+              # Logitech corded mouse
+              SUBSYSTEM=="usb",ATTR{idVendor}=="046d",ATTR{idProduct}=="c328",GROUP+="kvm"
+              # Some keyboard
+              SUBSYSTEM=="usb",ATTR{idVendor}=="413c",ATTR{idProduct}=="301a",GROUP+="kvm"
+            '';
+
+            # vsockproxy is needed for guest to guest communication over vsock
+            # It listens for incoming connections from app vms on port 1100 (vsock)
+            # and forwards data port 1101 of the guivm with cid 3 which is used by waypipe
+            systemd.services.vsockproxy = {
+              enable = true;
+              description = "vsockproxy";
+              unitConfig = {
+                Type = "simple";
+              };
+              serviceConfig = {
+                ExecStart = "${vsockproxy}/bin/vsockproxy 1100 3 1101";
+              };
+              wantedBy = [ "multi-user.target" ];
+            };
           })
 
           formatModule
@@ -131,7 +162,7 @@
               # TODO: Change per your device
               # Passthrough Intel WiFi card 8086:02f0
               # Passthrough Intel Embedded GPU 8086:9b41
-              "vfio-pci.ids=8086:02f0,8086:9b41"
+              "vfio-pci.ids=8086:a0f0,8086:9a49"
             ];
           }
         ]

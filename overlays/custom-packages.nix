@@ -16,7 +16,7 @@
 # nativeBuildInputs and buildInputs where possible.
 # It makes things clear and robust.
 #
-{lib, ...}: {
+{lib, pkgs, ...}: {
   nixpkgs.overlays = [
     (_final: prev: {
       # TODO: Remove this override if/when the fix is upstreamed.
@@ -75,6 +75,15 @@
               "Environment=SYSTEMD_NSS_RESOLVE_VALIDATE=0"
             ]}"
           '';
+      });
+      waypipe = prev.waypipe.overrideAttrs (prevAttrs: {
+        src = pkgs.fetchFromGitLab {
+          domain = "gitlab.freedesktop.org";
+          owner = "nesterov";
+          repo = "waypipe";
+          rev = "6abb272036a0acfeba47ebf80949b26396ce20f1";
+          sha256 = "sha256-05qWtc4opDokvc5VzgAjHFrNbNDGkbyBDq3G7Jc8qbA=";
+        };
       });
     })
   ];

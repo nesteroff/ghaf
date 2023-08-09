@@ -26,17 +26,17 @@
           };
           graphics.weston.launchers = [
             {
-              path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.5 chromium --enable-features=UseOzonePlatform --ozone-platform=wayland";
+              path = "${pkgs.openssh}/bin/ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.5 ${pkgs.waypipe}/bin/waypipe --vsock -s 1100 server chromium --enable-features=UseOzonePlatform --ozone-platform=wayland";
               icon = "${pkgs.weston}/share/weston/icon_editor.png";
             }
 
             {
-              path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.6 gala --enable-features=UseOzonePlatform --ozone-platform=wayland";
+              path = "${pkgs.openssh}/bin/ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.6 ${pkgs.waypipe}/bin/waypipe --vsock -s 1100 server gala --enable-features=UseOzonePlatform --ozone-platform=wayland";
               icon = "${pkgs.weston}/share/weston/icon_editor.png";
             }
 
             {
-              path = "${pkgs.waypipe}/bin/waypipe ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.7 zathura ${demo-pdf}/Whitepaper.pdf";
+              path = "${pkgs.openssh}/bin/ssh -i ${waypipe-ssh}/keys/waypipe-ssh -o StrictHostKeyChecking=no 192.168.101.7 ${pkgs.waypipe}/bin/waypipe --vsock -s 1100 server zathura ${demo-pdf}/Whitepaper.pdf";
               icon = "${pkgs.weston}/share/weston/icon_editor.png";
             }
           ];
@@ -63,13 +63,19 @@
         microvm = {
           mem = 2048;
           hypervisor = "qemu";
-          qemu.bios.enable = false;
           storeDiskType = "squashfs";
           interfaces = [{
             type = "tap";
             id = "vm-guivm";
             mac = "02:00:00:02:02:02";
           }];
+          qemu = {
+            bios.enable = false;
+            extraArgs = [
+              "-device"
+              "vhost-vsock-pci,guest-cid=3"
+            ];
+          };
         };
 
         networking.nat = {
@@ -104,10 +110,34 @@
         imports = import ../../module-list.nix;
 
         services.udev.extraRules = ''
-          ACTION=="add",SUBSYSTEM=="backlight",KERNEL=="intel_backlight",RUN+="${pkgs.bash}/bin/sh -c '${pkgs.coreutils}/bin/echo 120000 > /sys/class/backlight/intel_backlight/brightness'"
+          ACTION=="add",SUBSYSTEM=="backlight",KERNEL=="intel_backlight",RUN+="${pkgs.bash}/bin/sh -c '${pkgs.coreutils}/bin/echo 96000 > /sys/class/backlight/intel_backlight/brightness'"
         '';
 
         environment.systemPackages = [pkgs.htop pkgs.intel-gpu-tools];
+
+        # Waypipe service listens on port 1101 (vsock) and receive connections from gui vms over vsockproxy on host
+        systemd.user.services.waypipe = {
+          enable = true;
+          description = "waypipe";
+          after = [ "weston.service" ];
+          serviceConfig = {
+            Type = "simple";
+            Environment = [
+              "WAYLAND_DISPLAY=\"wayland-1\""
+              "DISPLAY=\":0\""
+              "XDG_SESSION_TYPE=wayland"
+              "QT_QPA_PLATFORM=\"wayland\"" # Qt Applications
+              "GDK_BACKEND=\"wayland\"" # GTK Applications
+              "XDG_SESSION_TYPE=\"wayland\"" # Electron Applications
+              "SDL_VIDEODRIVER=\"wayland\""
+              "CLUTTER_BACKEND=\"wayland\""
+            ];
+            ExecStart = "${pkgs.waypipe}/bin/waypipe --vsock -s 1101 client";
+            Restart = "always";
+            RestartSec = "1";
+          };
+          wantedBy = [ "ghaf-session.target" ];
+        };
       })
     ];
   };

@@ -47,13 +47,19 @@
               mem = vm.ramMb;
               vcpu = vm.cores;
               hypervisor = "qemu";
-              qemu.bios.enable = true;
               storeDiskType = "squashfs";
               interfaces = [{
                 type = "tap";
                 id = hostname;
                 mac = vm.macAddress;
               }];
+              qemu = {
+                bios.enable = true;
+                extraArgs = [
+                  "-device" "vhost-vsock-pci,guest-cid=${toString vm.cid}"
+                  "-M" "microvm,pcie=on"
+                ];
+              };
             };
 
             networking.nat = {
@@ -108,6 +114,7 @@ in
           macAddress = mkOption { type = str; };
           ramMb = mkOption { type = int; };
           cores = mkOption { type = int; };
+          cid = mkOption { type = int; };
         };
       });
       default = [ ];
