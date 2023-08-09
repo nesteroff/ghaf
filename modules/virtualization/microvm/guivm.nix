@@ -106,6 +106,8 @@
         services.udev.extraRules = ''
           ACTION=="add",SUBSYSTEM=="backlight",KERNEL=="intel_backlight",RUN+="${pkgs.bash}/bin/sh -c '${pkgs.coreutils}/bin/echo 120000 > /sys/class/backlight/intel_backlight/brightness'"
         '';
+
+        environment.systemPackages = [pkgs.htop pkgs.intel-gpu-tools];
       })
     ];
   };
