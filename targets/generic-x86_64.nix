@@ -39,6 +39,8 @@
           "-device" "usb-host,vendorid=0x046d,productid=0xc52b"
           "-device" "usb-host,vendorid=0x046d,productid=0xc328"
           "-device" "usb-host,vendorid=0x413c,productid=0x301a"
+          "-device" "virtio-input-host-pci,evdev=/dev/input/by-path/platform-i8042-serio-0-event-kbd"
+          "-device" "virtio-input-host-pci,evdev=/dev/input/by-path/platform-i8042-serio-1-event-mouse"
         ];
         microvm.devices = [
           {
@@ -124,11 +126,15 @@
             # Group kvm needs to access to USB keyboard and mouse for guivm USB passthrough 
             services.udev.extraRules = ''
               # Logitech usb dongle
-              SUBSYSTEM=="usb",ATTR{idVendor}=="046d",ATTR{idProduct}=="c52b",GROUP+="kvm"
+              SUBSYSTEM=="usb",ATTR{idVendor}=="046d",ATTR{idProduct}=="c52b",GROUP="kvm"
               # Logitech corded mouse
-              SUBSYSTEM=="usb",ATTR{idVendor}=="046d",ATTR{idProduct}=="c328",GROUP+="kvm"
+              SUBSYSTEM=="usb",ATTR{idVendor}=="046d",ATTR{idProduct}=="c328",GROUP="kvm"
               # Some keyboard
-              SUBSYSTEM=="usb",ATTR{idVendor}=="413c",ATTR{idProduct}=="301a",GROUP+="kvm"
+              SUBSYSTEM=="usb",ATTR{idVendor}=="413c",ATTR{idProduct}=="301a",GROUP="kvm"
+              # Laptop keyboard
+              SUBSYSTEM=="input",ATTRS{name}=="AT Translated Set 2 keyboard",GROUP="kvm"
+              # Laptop touchpad
+              SUBSYSTEM=="input",ATTRS{name}=="SynPS/2 Synaptics TouchPad",GROUP="kvm"
             '';
 
             # vsockproxy is needed for guest to guest communication over vsock
