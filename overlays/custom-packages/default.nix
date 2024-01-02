@@ -6,7 +6,6 @@
 _: {
   nixpkgs.overlays = [
     (import ./gala)
-    (import ./systemd)
     (import ./waypipe)
     (import ./weston)
     (import ./wifi-connector)

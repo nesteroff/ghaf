@@ -3,6 +3,7 @@
 {
   lib,
   pkgs,
+  config,
   ...
 }: {
   imports = [
@@ -49,5 +50,8 @@
 
     boot.enableContainers = false;
     ##### Remove to here
+
+    # Remove the next line when systemd-timesyncd fix reaches the upstream nixpkgs
+    systemd.services.systemd-timesyncd.environment.LD_LIBRARY_PATH = config.system.nssModules.path;
   };
 }
