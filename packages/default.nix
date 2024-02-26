@@ -15,6 +15,7 @@
       kernel-hardening-checker = callPackage ./kernel-hardening-checker {};
       windows-launcher = callPackage ./windows-launcher {enableSpice = false;};
       windows-launcher-spice = callPackage ./windows-launcher {enableSpice = true;};
+      ghaf-chromium = callPackage ./ghaf-chromium {};
       doc = callPackage ../docs {
         revision = lib.ghaf-version;
         # options = ;

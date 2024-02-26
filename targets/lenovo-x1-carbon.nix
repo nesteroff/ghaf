@@ -392,7 +392,7 @@
                         echo $filepath | ${pkgs.netcat}/bin/nc -N gui-vm.ghaf ${toString xdgPdfPort}
                       '';
                     in [
-                      pkgs.chromium
+                      pkgs.ghaf-chromium
                       pkgs.pamixer
                       pkgs.xdg-utils
                       xdgPdfItem
@@ -427,9 +427,6 @@
                         ];
                         microvm.devices = [];
 
-                        # Disable chromium built-in PDF viewer to make it execute xdg-open
-                        programs.chromium.enable = true;
-                        programs.chromium.extraOpts."AlwaysOpenPdfExternally" = true;
                         # Set default PDF XDG handler
                         xdg.mime.defaultApplications."application/pdf" = "ghaf-pdf.desktop";
                       }
