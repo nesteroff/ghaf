@@ -64,6 +64,9 @@
                 #graphics.compositor = "labwc";
               };
               windows-launcher.enable = true;
+
+              # Uncomment this line to enable the virtgpu-vm with a virtio-gpu device:
+              #virtualization.microvm.virtgpuvm.enable = true;
             };
 
             #TODO: how to handle the majority of laptops that need a little

@@ -19,4 +19,6 @@
   # launcher overlays
   networkmanagerapplet = import ./networkmanagerapplet {inherit prev;};
   htop = import ./htop {inherit prev;};
+  sommelier = import ./sommelier {inherit final prev;};
+  crosvm = import ./crosvm {inherit final prev;};
 })
