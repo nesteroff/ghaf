@@ -8,6 +8,23 @@
 }: let
   configHost = config;
   vmName = "virtgpu-vm";
+  # The socket is created in /tmp because it is accessible to both microvm and ghaf users
+  gpuSocket = "/tmp/crosvmgpu.sock";
+  run-sommelier = with pkgs;
+    writeScriptBin "run-sommelier" ''
+      #!${runtimeShell} -e
+      exec ${sommelier}/bin/sommelier --virtgpu-channel -- $@
+    '';
+  run-wayland-proxy = with pkgs;
+    writeScriptBin "run-wayland-proxy" ''
+      #!${runtimeShell} -e
+      exec ${wayland-proxy-virtwl}/bin/wayland-proxy-virtwl --virtio-gpu -- $@
+    '';
+  run-waypipe = with pkgs;
+    writeScriptBin "run-waypipe" ''
+      #!${runtimeShell} -e
+      exec ${waypipe}/bin/waypipe --vsock -s 2:6000 server $@
+    '';
   virtgpuvmBaseConfiguration = {
     imports = [
       (import ./common/vm-networking.nix {
@@ -56,8 +73,12 @@
           pkgs.sommelier
           pkgs.wayland-proxy-virtwl
           pkgs.waypipe
+          run-sommelier
+          run-wayland-proxy
+          run-waypipe
           pkgs.zathura
           pkgs.chromium
+          pkgs.firefox
         ];
 
         # DRM fbdev emulation is disabled to get rid of the popup console window that appears when running a VM with virtio-gpu device
@@ -85,8 +106,8 @@
             }
           ];
 
-          # Adds run-sommelier, run-wayland-proxy and run-waypipe scripts as well as drm and virtio_gpu kernel modules
-          graphics.enable = true;
+          # GPU device is a separate service which is connected over vhost-user protocol
+          crosvm.extraArgs = ["--vhost-user" "gpu,socket=${gpuSocket}"];
 
           # VSOCK is required for waypipe, 3 is the first available CID
           vsock.cid = 3;
@@ -113,7 +134,6 @@ in {
 
   config = lib.mkIf cfg.enable {
     microvm.vms."${vmName}" = {
-      autostart = false;
       config = virtgpuvmBaseConfiguration // {imports = virtgpuvmBaseConfiguration.imports ++ cfg.extraModules;};
       specialArgs = {inherit lib;};
     };
@@ -138,7 +158,7 @@ in {
       };
     };
 
-    # MicroVM.nix contains a run-waypipe script that expects Waypipe to be running on the host and listening on port 6000
+    # Waypipe client service is needed for the run-waypipe script to work
     systemd.user.services.waypipe = {
       enable = true;
       description = "waypipe";
@@ -152,5 +172,34 @@ in {
       startLimitIntervalSec = 0;
       wantedBy = ["ghaf-session.target"];
     };
+
+    # This service creates a crosvm backend GPU device
+    systemd.user.services.crosvmgpu = let
+      startScript = pkgs.writeShellScriptBin "start-crosvmgpu" ''
+        rm -f ${gpuSocket}
+        ${pkgs.crosvm}/bin/crosvm device gpu --socket ${gpuSocket} --wayland-sock $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY --params '{"context-types":"virgl:virgl2:cross-domain","egl":true,"vulkan":true}'
+      '';
+      postStartScript = pkgs.writeShellScriptBin "poststart-crosvmgpu" ''
+        while ! [ -S ${gpuSocket} ]; do
+              sleep .1
+        done
+        chgrp video ${gpuSocket}
+        chmod 775 ${gpuSocket}
+      '';
+    in {
+      enable = true;
+      description = "crosvm gpu device";
+      after = ["weston.service" "labwc.service"];
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${startScript}/bin/start-crosvmgpu";
+        ExecStartPost = "${postStartScript}/bin/poststart-crosvmgpu";
+        Restart = "always";
+        RestartSec = "1";
+      };
+      startLimitIntervalSec = 0;
+      wantedBy = ["ghaf-session.target"];
+    };
+    users.users."microvm".extraGroups = ["video"];
   };
 }

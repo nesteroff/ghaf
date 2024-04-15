@@ -82,6 +82,9 @@
               # Passthrough Intel WiFi card
               "vfio-pci.ids=8086:a0f0"
             ];
+
+            # Enable DHCP on the host to be able to access network and connect to VMs by name, e.g. net-vm.ghaf
+            systemd.network.networks."10-virbr0".DHCP = "yes";
           }
         ]
         ++ extraModules;
