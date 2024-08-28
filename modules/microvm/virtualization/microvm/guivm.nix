@@ -106,6 +106,7 @@ let
               ])
               ++ [
                 pkgs.nm-launcher
+                pkgs.bt-launcher
                 pkgs.pamixer
               ]
               ++ (lib.optional (
